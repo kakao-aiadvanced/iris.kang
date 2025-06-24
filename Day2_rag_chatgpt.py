@@ -1,5 +1,5 @@
 ## 테스트 
-#- 모두 relevance yes : 'agent memory'
+#- 모두 relevance yes : 'LLM'
 #- 부분적으로 relevance no : 'GPT'
 #- 모두 relevance no : 'SSD'
 import getpass
@@ -19,6 +19,9 @@ import requests
 
 # Load environment variables
 load_dotenv()
+
+# USER_AGENT 환경변수 읽기
+USER_AGENT = os.getenv("USER_AGENT", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")
 
 # LLM 초기화
 llm = ChatOpenAI(model="gpt-4o-mini")
@@ -134,6 +137,9 @@ loader = WebBaseLoader(
             class_=("post-content", "post-title", "post-header")
         )
     ),
+    header_template={
+        "User-Agent": USER_AGENT
+    }
 )
 docs = loader.load()
 
@@ -186,7 +192,7 @@ def main():
     print(f"Retrieved {len(retrieved_docs)} chunks")
 
     # 각 청크의 관련성 평가
-    print("\n### RELEVANCE EVALUATION RESULTS  ###")
+    print("\n### 관련성 평가 결과  ###")
     relevant_chunks = []
 
     for i, doc in enumerate(retrieved_docs, 1):
@@ -232,7 +238,7 @@ def main():
                 
                 # 답변 생성 재시도
                 retry_rag_result = rag_chain.invoke(test_query)
-                print(f"재생성된 답변: {retry_rag_result}")
+                print(f"\n재생성된 답변: {retry_rag_result}")
                 
                 # 재시도 답변의 hallucination 평가
                 print("\n재생성된 답변 HALLUCINATION 평가:")
