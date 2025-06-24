@@ -51,8 +51,6 @@ text_splitter = RecursiveCharacterTextSplitter(
     length_function=len,
     is_separator_regex=False,
 )
-
-# 문서 청크 생성
 splits = text_splitter.split_documents(docs)
 
 # OpenAI Embeddings 초기화
@@ -60,22 +58,22 @@ embeddings = OpenAIEmbeddings(
     model="text-embedding-3-small"
 )
 
-# Create Chroma vector store from documents
+# Chroma 벡터 저장소 생성
 vectorstore = Chroma.from_documents(documents=splits, embedding=embeddings)
 
-# Create retriever with specified search type and parameters
+# retriever 생성
 retriever = vectorstore.as_retriever(
     search_type="similarity",
     search_kwargs={"k": 6}
 )
 
-# Pull RAG prompt from hub
+# RAG 프롬프트 파싱
 prompt = hub.pull("rlm/rag-prompt")
 
 def format_docs(docs):
     return "\n\n".join(doc.page_content for doc in docs)
 
-# Create a RAG chain
+# RAG 체인 생성
 rag_chain = (
     {"context": retriever | format_docs, "question": RunnablePassthrough()}
     | prompt
@@ -138,18 +136,18 @@ if len(sys.argv) > 1:
 else:
     test_query = input("쿼리를 입력하세요: ")
 
-# Test the RAG system with relevance evaluation
+# RAG 시스템 평가
 print("1. RAG 기반 관련성 평가")
 print("="*60)
 
 print(f"Query: '{test_query}'")
 print("-" * 40)
 
-# Retrieve chunks
+# 청크 검색
 retrieved_docs = retriever.invoke(test_query)
 print(f"Retrieved {len(retrieved_docs)} chunks")
 
-# Evaluate relevance for each chunk
+# 각 청크의 관련성 평가
 print("\n### RELEVANCE EVALUATION RESULTS  ###")
 relevant_chunks = []
 
@@ -170,6 +168,7 @@ for i, doc in enumerate(retrieved_docs, 1):
 
 print(f"\nSummary: {len(relevant_chunks)} out of {len(retrieved_docs)} 청크가 관련성이 있습니다.")
 
+# hallucination 평가 프롬프트 생성
 hallucination_prompt = PromptTemplate(
     template="""You are an expert fact-checking evaluator.
 
@@ -214,16 +213,16 @@ def evaluate_hallucination(source_context, generated_answer):
         print(f"Error evaluating hallucination: {e}")
         return {"hallucination": "error"}
 
-# Generate answer using only relevant chunks if available
+# 관련 청크로 답변 생성
 if relevant_chunks:
     print(f"\n{len(relevant_chunks)} 개의 청크를 사용해 답변 생성중입니다...\n")
     relevant_context = format_docs(relevant_chunks)
     
-    # Create a custom RAG chain with filtered context
+    # 필터링된 컨텍스트로 RAG 체인 생성
     filtered_rag_result = rag_chain.invoke(test_query)
     print(f"답변: {filtered_rag_result}")
     
-    # Evaluate hallucination
+    # hallucination 평가
     print("\n2. HALLUCINATION 평가")
     print("="*60)
     
@@ -234,15 +233,15 @@ if relevant_chunks:
     else:
         print(f"Hallucination: {hallucination_result}")
         
-        # If hallucination detected, retry once
+        # hallucination 감지 시 1회 재시도
         if hallucination_result.get('hallucination') == 'yes':
             print("\nHallucination 감지! 답변을 다시 생성합니다...")
             
-            # Retry answer generation once
+            # 답변 생성 재시도
             retry_rag_result = rag_chain.invoke(test_query)
             print(f"재생성된 답변: {retry_rag_result}")
             
-            # Evaluate hallucination for retry
+            # 재시도 답변의 hallucination 평가
             print("\n재생성된 답변 HALLUCINATION 평가:")
             retry_hallucination_result = evaluate_hallucination(relevant_context, retry_rag_result)
             
