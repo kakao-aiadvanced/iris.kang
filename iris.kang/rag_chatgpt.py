@@ -119,9 +119,6 @@ def evaluate_hallucination(source_context, generated_answer):
         print(f"Error evaluating hallucination: {e}")
         return {"hallucination": "error"}
 
-# ==========================================
-# 4. DATA LOADING & VECTORSTORE CREATION
-# ==========================================
 # 로딩할 URL 정의
 url_list = [
     "https://lilianweng.github.io/posts/2023-06-23-agent/",
@@ -171,7 +168,6 @@ rag_chain = (
     | StrOutputParser()
 )
 def main():
-    """메인 실행 함수"""
     # 명령어 라인에서 쿼리 받기
     if len(sys.argv) > 1:
         test_query = " ".join(sys.argv[1:])  # 여러 단어 쿼리 지원
